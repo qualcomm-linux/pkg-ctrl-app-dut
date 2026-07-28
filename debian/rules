@@ -1,4 +1,7 @@
 #!/usr/bin/make -f
-
 %:
 	dh $@
+
+override_dh_auto_install:
+	mkdir -p debian/ctrl-app-dut/
+	tar -xzf $(CURDIR)/../ctrl-app-dut_2.3.0_arm64.tar.gz -C debian/ctrl-app-dut/
