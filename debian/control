@@ -1,4 +1,4 @@
-Source: pkg-ctrl-app-dut
+Source: ctrl-app-dut
 Section: utils
 Priority: optional
 Maintainer: Jing Feng <jinfen@qti.qualcomm.com>
