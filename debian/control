@@ -9,3 +9,8 @@ Package: ctrl-app-dut
 Architecture: arm64
 Description: Qualcomm proprietary ctrl-app-dut WLAN component
  Proprietary prebuilt binary package for ctrl-app-dut.
+
+Package: ath11k-fwtest
+Architecture: arm64
+Description: Qualcomm proprietary ath11k-fwtest WLAN component
+ Proprietary prebuilt binary package for ath11k-fwtest.
