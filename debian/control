@@ -2,7 +2,10 @@ Source: wlan-service
 Section: utils
 Priority: optional
 Maintainer: Jing Feng <jinfen@qti.qualcomm.com>
-Build-Depends: debhelper-compat (= 13)
+Build-Depends:
+ debhelper-compat (= 13),
+ curl,
+ ca-certificates
 Standards-Version: 4.6.2
 
 Package: ctrl-app-dut
