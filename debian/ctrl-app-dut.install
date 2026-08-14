@@ -1,1 +1,3 @@
-usr/lib/template.so*
+data/ctrl-app-dut/arm64/usr/bin/ctrl_app_dut usr/bin/
+data/ctrl-app-dut/arm64/usr/sbin/ctrl_app_dut usr/sbin/
+data/ctrl-app-dut/arm64/usr/share/doc/ctrl-app-dut/* usr/share/doc/ctrl-app-dut/
