@@ -1,13 +1,12 @@
-cat > debian/rules << 'EOF'
 #!/usr/bin/make -f
 
 %:
 	dh $@
 
 override_dh_auto_install:
-	mkdir -p debian/ctrl-app-dut/
+	mkdir -p debian/tmp
+
 	find . -mindepth 1 -maxdepth 1 \
-		! -name 'debian' \
-		! -name '.git' \
-		-exec cp -rp {} debian/ctrl-app-dut/ \;
-EOF
+		! -name debian \
+		! -name .git \
+		-exec cp -rp {} debian/tmp/ \;
