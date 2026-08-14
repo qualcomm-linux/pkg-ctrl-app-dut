@@ -4,9 +4,11 @@
 	dh $@
 
 override_dh_auto_install:
-	mkdir -p debian/tmp
-
-	find . -mindepth 1 -maxdepth 1 \
-		! -name debian \
-		! -name .git \
-		-exec cp -rp {} debian/tmp/ \;
+	set -e; \
+	. debian/upstream.conf; \
+	mkdir -p debian/tmp; \
+	curl -fL \
+		-o debian/wlan-service.tar.gz \
+		"$${ARTIFACTORY}/$${TAG}/$${DISTRO}/$${PACKAGE_NAME}"; \
+	tar -xzf debian/wlan-service.tar.gz -C debian/tmp; \
+	rm -f debian/wlan-service.tar.gz
