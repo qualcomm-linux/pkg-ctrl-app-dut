@@ -1,13 +1,5 @@
-#!/usr/bin/make -f
-
-%:
-	dh $@
-
 override_dh_auto_install:
 	set -e; \
-	test -d data/ctrl-app-dut/arm64 || { \
-		echo "ERROR: data/ctrl-app-dut/arm库：
-
-```bash
-f debian/ctrl-app-dut.install
-rm -f debian/ath11k-fwtest.install
+	mkdir -p debian/tmp; \
+	cp -a data/ctrl-app-dut/arm64/. debian/tmp/; \
+	cp -a data/ath11k-fwtest/arm64/. debian/tmp/
