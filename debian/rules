@@ -5,6 +5,14 @@
 
 override_dh_auto_install:
 	set -e; \
-	mkdir -p debian/tmp; \
-	cp -a data/ctrl-app-dut/arm64/. debian/tmp/; \
-	cp -a data/ath11k-fwtest/arm64/. debian/tmp/
+	test -d data/ctrl-app-dut/arm64 || { \
+		echo "ERROR: data/ctrl-app-dut/arm64 not found"; \
+		exit 1; \
+	}; \
+	test -d data/ath11k-fwtest/arm64 || { \
+		echo "ERROR: data/ath11k-fwtest/arm64 not found"; \
+		exit 1; \
+	}; \
+	mkdir -p debian/ctrl-app-dut debian/ath11k-fwtest; \
+	cp -a data/ctrl-app-dut/arm64/. debian/ctrl-app-dut/; \
+	cp -a data/ath11k-fwtest/arm64/. debian/ath11k-fwtest/
