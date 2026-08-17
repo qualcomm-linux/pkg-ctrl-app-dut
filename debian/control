@@ -3,10 +3,9 @@ Section: utils
 Priority: optional
 Maintainer: Jing Feng <jinfen@qti.qualcomm.com>
 Build-Depends:
- debhelper-compat (= 13),
- curl,
- ca-certificates
+ debhelper-compat (= 13)
 Standards-Version: 4.6.2
+Rules-Requires-Root: no
 
 Package: ctrl-app-dut
 Architecture: arm64
