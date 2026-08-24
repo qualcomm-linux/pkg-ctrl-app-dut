@@ -1,7 +1,5 @@
-wlan-service (2.3.0-1) UNRELEASED; urgency=medium
+wlan-service (260630.1-1) noble; urgency=medium
 
-  * Update upstream source to wlan-service 260630.1.
-  * Add ath11k-fwtest binary package.
-  * Build ctrl-app-dut and ath11k-fwtest packages.
+  * Release ftmdaemon-ip from prebuilt_noble.
 
- -- Jing Feng <jinfen@qti.qualcomm.com>  Fri, 14 Aug 2026 00:00:00 +0000
+ -- Jing Feng <jinfen@qti.qualcomm.com>  Mon, 24 Aug 2026 10:56:00 +0800
