@@ -1,0 +1,89 @@
+name: Build Package Reusable Workflow
+
+on:
+  workflow_call:
+    inputs:
+      qcom-build-utils-ref:
+        description: qcom-build-utils ref to use
+        required: false
+        type: string
+        default: main
+
+      debian-ref:
+        description: The package repo ref to build, also used to locate upstream.conf
+        required: true
+        type: string
+
+      force-docker-build:
+        description: Force local pkg-builder instead of Debusine for Debian-family suites
+        required: false
+        type: boolean
+        default: false
+
+      debusine-parent-workspace:
+        description: Debusine parent workspace
+        required: false
+        type: string
+        default: ""
+
+    secrets:
+      DEBUSINE_USER:
+        required: false
+      DEBUSINE_TOKEN:
+        required: false
+
+permissions:
+  contents: read
+  packages: read
+
+jobs:
+  build:
+    name: Build
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout package repo
+        uses: actions/checkout@v4
+        with:
+          repository: ${{ github.repository }}
+          ref: ${{ inputs.debian-ref }}
+          path: package-repo
+
+      - name: Debug package repo ref
+        shell: bash
+        run: |
+          echo "github.repository=${{ github.repository }}"
+          echo "inputs.debian-ref=${{ inputs.debian-ref }}"
+          echo "Package repo HEAD:"
+          git -C package-repo log -1 --oneline
+          echo "Package repo branch/ref:"
+          git -C package-repo branch --show-current || true
+          echo "Checking upstream.conf:"
+          ls -l package-repo/upstream.conf
+
+      - name: Download Prebuilt Binary Archive
+        shell: bash
+        run: |
+          set -euo pipefail
+
+          INPUTS_PKG_DIR="package-repo"
+          UPSTREAM_CONF="${INPUTS_PKG_DIR}/upstream.conf"
+
+          echo "Sourcing ${UPSTREAM_CONF}"
+          echo "Using debian-ref: ${{ inputs.debian-ref }}"
+
+          if [ ! -f "${UPSTREAM_CONF}" ]; then
+            echo "ERROR: ${UPSTREAM_CONF} not found"
+            exit 1
+          fi
+
+          source "${UPSTREAM_CONF}"
+
+          echo "URL  : ${URL:-}"
+          echo "Tag  : ${TAG:-}"
+          echo "File : ${FILE:-}"
+
+          curl -L -o "${FILE}" "${URL}"
+          tar -xzf "${FILE}" -C "${INPUTS_PKG_DIR}"
+
+      # 后面继续你原来的 build steps
