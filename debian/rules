@@ -5,14 +5,10 @@
 
 override_dh_auto_install:
 	set -e; \
-	test -d data/ctrl-app-dut/arm64 || { \
-		echo "ERROR: data/ctrl-app-dut/arm64 not found"; \
+	test -d data/ftmdaemon-ip/arm64 || { \
+		echo "ERROR: data/ftmdaemon-ip/arm64 not found"; \
 		exit 1; \
 	}; \
-	test -d data/ath11k-fwtest/arm64 || { \
-		echo "ERROR: data/ath11k-fwtest/arm64 not found"; \
-		exit 1; \
-	}; \
-	mkdir -p debian/ctrl-app-dut debian/ath11k-fwtest; \
-	cp -a data/ctrl-app-dut/arm64/. debian/ctrl-app-dut/; \
-	cp -a data/ath11k-fwtest/arm64/. debian/ath11k-fwtest/
+
+	mkdir -p debian/ftmdaemon-ip debian/ftmdaemon-ipt; \
+	cp -a data/ftmdaemon-ipt/arm64/. debian/ftmdaemon-ip/
