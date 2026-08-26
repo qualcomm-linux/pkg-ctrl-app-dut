@@ -3,35 +3,10 @@ name: Build Package Reusable Workflow
 on:
   workflow_call:
     inputs:
-      qcom-build-utils-ref:
-        description: qcom-build-utils ref to use
-        required: false
-        type: string
-        default: main
-
       debian-ref:
-        description: The package repo ref to build, also used to locate upstream.conf
+        description: The package repo ref to build
         required: true
         type: string
-
-      force-docker-build:
-        description: Force local pkg-builder instead of Debusine for Debian-family suites
-        required: false
-        type: boolean
-        default: false
-
-      debusine-parent-workspace:
-        description: Debusine parent workspace
-        required: false
-        type: string
-        default: ""
-
-      # ===== 修改点 1：新增 source-only 输入 =====
-      source-only:
-        description: Build only the Debian source package with dpkg-source
-        required: false
-        type: boolean
-        default: true
 
     secrets:
       DEBUSINE_USER:
@@ -45,7 +20,7 @@ permissions:
 
 jobs:
   build:
-    name: Build
+    name: Build source package
     runs-on: ubuntu-latest
 
     steps:
@@ -56,21 +31,16 @@ jobs:
           ref: ${{ inputs.debian-ref }}
           path: package-repo
 
-      - name: Debug package repo ref
+      - name: Debug package repo
         shell: bash
         run: |
           set -euo pipefail
 
-          echo "github.repository=${{ github.repository }}"
-          echo "inputs.debian-ref=${{ inputs.debian-ref }}"
+          echo "Repository: ${{ github.repository }}"
+          echo "Debian ref: ${{ inputs.debian-ref }}"
 
-          echo "Package repo HEAD:"
           git -C package-repo log -1 --oneline
 
-          echo "Package repo branch/ref:"
-          git -C package-repo branch --show-current || true
-
-          echo "Checking upstream.conf:"
           test -f package-repo/upstream.conf
           ls -l package-repo/upstream.conf
 
@@ -82,23 +52,15 @@ jobs:
           INPUTS_PKG_DIR="package-repo"
           UPSTREAM_CONF="${INPUTS_PKG_DIR}/upstream.conf"
 
-          echo "Sourcing ${UPSTREAM_CONF}"
-          echo "Using debian-ref: ${{ inputs.debian-ref }}"
-
-          if [ ! -f "${UPSTREAM_CONF}" ]; then
-            echo "ERROR: ${UPSTREAM_CONF} not found"
-            exit 1
-          fi
-
           # shellcheck disable=SC1090
           source "${UPSTREAM_CONF}"
 
-          echo "URL  : ${URL:-}"
-          echo "Tag  : ${TAG:-}"
-          echo "File : ${FILE:-}"
-
           : "${URL:?URL is not defined in upstream.conf}"
           : "${FILE:?FILE is not defined in upstream.conf}"
+
+          echo "URL  : ${URL}"
+          echo "Tag  : ${TAG:-}"
+          echo "File : ${FILE}"
 
           curl \
             --fail \
@@ -109,44 +71,32 @@ jobs:
 
           tar -xzf "${FILE}" -C "${INPUTS_PKG_DIR}"
 
-      # ===== 修改点 2：新增 dpkg-source 所需工具 =====
       - name: Install source package tools
-        if: ${{ inputs.source-only }}
         shell: bash
         run: |
           set -euo pipefail
 
           sudo apt-get update
-          sudo apt-get install -y \
-            dpkg-dev \
-            devscripts \
-            debhelper
+          sudo apt-get install -y dpkg-dev
 
-      # ===== 修改点 3：用 dpkg-source -b 替代原来的 build_package action =====
-      #
-      # 不要再添加以下步骤：
-      #
-      # - uses: ./qcom-build-utils/.github/actions/build_package
-      #
-      # 因为该 action 会继续调用 sbuild。
+      # =========================================================
+      # 修改点：只执行 dpkg-source -b
+      # 不调用 qcom-build-utils/build_package
+      # 不调用 sbuild
+      # =========================================================
       - name: Build Debian Source Package
-        if: ${{ inputs.source-only }}
         shell: bash
         run: |
           set -euo pipefail
 
           cd package-repo
 
-          echo "Working directory: $(pwd)"
-          echo "Debian source directory:"
-          ls -la
-          ls -la debian
-
+          echo "[source-pkg] Working directory: $(pwd)"
           echo "[source-pkg] Running dpkg-source -b ..."
 
           dpkg-source -b .
 
-          echo "[source-pkg] Source package files:"
+          echo "[source-pkg] Source package generated:"
           find .. -maxdepth 1 -type f \
             \( \
               -name "*.dsc" \
@@ -155,16 +105,14 @@ jobs:
             \) \
             -print
 
-          echo "Successfully built source package"
+          echo "[source-pkg] Successfully built source package"
 
-      # ===== 修改点 4：上传 source package 产物 =====
-      - name: Upload Debian Source Package
-        if: ${{ inputs.source-only }}
+      - name: Upload source package
         uses: actions/upload-artifact@v4
         with:
           name: wlan-service-source-package
-          if-no-files-found: error
           path: |
             *.dsc
             *.orig.tar.*
             *.debian.tar.*
+          if-no-files-found: error
