@@ -1,20 +1,22 @@
 name: Build
+
 description: |
-  Builds the debian package represented by this repo at the ref pointed by the debain-ref argument.
+  Builds the Debian source package represented by this repository
+  at the ref pointed to by the debian-ref argument.
 
 on:
   workflow_dispatch:
     inputs:
-
       debian-ref:
-        description: The debian ref to build. For example branch "qcom/debian/latest" or tag "debian/1.0.0-1"
+        description: The package repo ref to build. For example branch "qcom/debian/latest" or tag "debian/1.0.0-1"
         type: string
         required: true
         default: qcom/debian/latest
 
       force-docker-build:
-        description: Force local pkg-builder instead of Debusine for Debian-family suites
+        description: Not used for source-only builds
         type: boolean
+        required: false
         default: false
 
 permissions:
@@ -23,14 +25,141 @@ permissions:
 
 jobs:
   build:
-    name: Build
-    uses: qualcomm-linux/qcom-build-utils/.github/workflows/pkg-build-reusable-workflow.yml@main
-    with:
-      qcom-build-utils-ref: main
-      debian-ref: ${{ inputs.debian-ref }}
-      force-docker-build: ${{ inputs.force-docker-build }}
-      debusine-parent-workspace: ${{ vars.DEBUSINE_PARENT_WORKSPACE }}
-      source-only: true
-    secrets:
-      DEBUSINE_USER: ${{ secrets.DEBUSINE_USER }}
-      DEBUSINE_TOKEN: ${{ secrets.DEBUSINE_TOKEN }}
+    name: Build Debian Source Package
+    runs-on: ubuntu-latest
+
+    steps:
+      # ==========================================================
+      # 修改点 1：
+      # 不再使用 qcom-build-utils reusable workflow，
+      # 改为在当前 repo 中直接 checkout 和执行命令。
+      # ==========================================================
+      - name: Checkout package repository
+        uses: actions/checkout@v4
+        with:
+          repository: ${{ github.repository }}
+          ref: ${{ inputs.debian-ref }}
+          path: package-repo
+
+      - name: Debug package repository
+        shell: bash
+        run: |
+          set -euo pipefail
+
+          echo "Repository: ${{ github.repository }}"
+          echo "Debian ref: ${{ inputs.debian-ref }}"
+
+          echo "Package repository HEAD:"
+          git -C package-repo log -1 --oneline
+
+          echo "Package repository files:"
+          ls -la package-repo
+
+          test -f package-repo/upstream.conf
+          echo "Found package-repo/upstream.conf"
+
+      # ==========================================================
+      # 修改点 2：
+      # 保留 upstream.conf 中定义的 prebuilt archive 下载逻辑。
+      # ==========================================================
+      - name: Download Prebuilt Binary Archive
+        shell: bash
+        run: |
+          set -euo pipefail
+
+          INPUTS_PKG_DIR="package-repo"
+          UPSTREAM_CONF="${INPUTS_PKG_DIR}/upstream.conf"
+
+          if [ ! -f "${UPSTREAM_CONF}" ]; then
+            echo "ERROR: ${UPSTREAM_CONF} not found"
+            exit 1
+          fi
+
+          echo "Sourcing ${UPSTREAM_CONF}"
+
+          # shellcheck disable=SC1090
+          source "${UPSTREAM_CONF}"
+
+          : "${URL:?URL is not defined in upstream.conf}"
+          : "${FILE:?FILE is not defined in upstream.conf}"
+
+          echo "URL  : ${URL}"
+          echo "Tag  : ${TAG:-}"
+          echo "File : ${FILE}"
+
+          curl \
+            --fail \
+            --location \
+            --retry 3 \
+            --output "${FILE}" \
+            "${URL}"
+
+          tar -xzf "${FILE}" -C "${INPUTS_PKG_DIR}"
+
+      # ==========================================================
+      # 修改点 3：
+      # 只安装生成 source package 所需工具。
+      # 不安装或配置 sbuild/schroot。
+      # ==========================================================
+      - name: Install source package tools
+        shell: bash
+        run: |
+          set -euo pipefail
+
+          sudo apt-get update
+          sudo apt-get install -y \
+            dpkg-dev \
+            devscripts \
+            debhelper
+
+      # ==========================================================
+      # 修改点 4：
+      # 直接执行 dpkg-source -b。
+      # 这里不会调用 sbuild，因此不需要 chroot。
+      # ==========================================================
+      - name: Build Debian Source Package
+        shell: bash
+        run: |
+          set -euo pipefail
+
+          INPUTS_PKG_DIR="package-repo"
+
+          cd "${INPUTS_PKG_DIR}"
+
+          echo "[source-pkg] Working directory: $(pwd)"
+          echo "[source-pkg] Debian directory:"
+          ls -la debian
+
+          echo "[source-pkg] Running dpkg-source -b ..."
+
+          dpkg-source -b .
+
+          echo "[source-pkg] Source package ready"
+
+          cd ..
+
+          find . -maxdepth 1 -type f \
+            \( \
+              -name "*.dsc" \
+              -o -name "*.orig.tar.*" \
+              -o -name "*.debian.tar.*" \
+            \) \
+            -print
+
+          echo "[source-pkg] Successfully built source package"
+
+      # ==========================================================
+      # 修改点 5：
+      # 上传生成的 source package 文件。
+      # dpkg-source 在 package-repo 中运行时，
+      # 输出文件通常位于 package-repo 的上一级目录。
+      # ==========================================================
+      - name: Upload Debian Source Package
+        uses: actions/upload-artifact@v4
+        with:
+          name: wlan-service-source-package
+          path: |
+            *.dsc
+            *.orig.tar.*
+            *.debian.tar.*
+          if-no-files-found: error
