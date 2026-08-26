@@ -26,6 +26,13 @@ on:
         type: string
         default: ""
 
+      # ===== 修改点 1：新增 source-only 输入 =====
+      source-only:
+        description: Build only the Debian source package with dpkg-source
+        required: false
+        type: boolean
+        default: true
+
     secrets:
       DEBUSINE_USER:
         required: false
@@ -52,13 +59,19 @@ jobs:
       - name: Debug package repo ref
         shell: bash
         run: |
+          set -euo pipefail
+
           echo "github.repository=${{ github.repository }}"
           echo "inputs.debian-ref=${{ inputs.debian-ref }}"
+
           echo "Package repo HEAD:"
           git -C package-repo log -1 --oneline
+
           echo "Package repo branch/ref:"
           git -C package-repo branch --show-current || true
+
           echo "Checking upstream.conf:"
+          test -f package-repo/upstream.conf
           ls -l package-repo/upstream.conf
 
       - name: Download Prebuilt Binary Archive
@@ -77,13 +90,81 @@ jobs:
             exit 1
           fi
 
+          # shellcheck disable=SC1090
           source "${UPSTREAM_CONF}"
 
           echo "URL  : ${URL:-}"
           echo "Tag  : ${TAG:-}"
           echo "File : ${FILE:-}"
 
-          curl -L -o "${FILE}" "${URL}"
+          : "${URL:?URL is not defined in upstream.conf}"
+          : "${FILE:?FILE is not defined in upstream.conf}"
+
+          curl \
+            --fail \
+            --location \
+            --retry 3 \
+            --output "${FILE}" \
+            "${URL}"
+
           tar -xzf "${FILE}" -C "${INPUTS_PKG_DIR}"
 
-      # 后面继续你原来的 build steps
+      # ===== 修改点 2：新增 dpkg-source 所需工具 =====
+      - name: Install source package tools
+        if: ${{ inputs.source-only }}
+        shell: bash
+        run: |
+          set -euo pipefail
+
+          sudo apt-get update
+          sudo apt-get install -y \
+            dpkg-dev \
+            devscripts \
+            debhelper
+
+      # ===== 修改点 3：用 dpkg-source -b 替代原来的 build_package action =====
+      #
+      # 不要再添加以下步骤：
+      #
+      # - uses: ./qcom-build-utils/.github/actions/build_package
+      #
+      # 因为该 action 会继续调用 sbuild。
+      - name: Build Debian Source Package
+        if: ${{ inputs.source-only }}
+        shell: bash
+        run: |
+          set -euo pipefail
+
+          cd package-repo
+
+          echo "Working directory: $(pwd)"
+          echo "Debian source directory:"
+          ls -la
+          ls -la debian
+
+          echo "[source-pkg] Running dpkg-source -b ..."
+
+          dpkg-source -b .
+
+          echo "[source-pkg] Source package files:"
+          find .. -maxdepth 1 -type f \
+            \( \
+              -name "*.dsc" \
+              -o -name "*.orig.tar.*" \
+              -o -name "*.debian.tar.*" \
+            \) \
+            -print
+
+          echo "Successfully built source package"
+
+      # ===== 修改点 4：上传 source package 产物 =====
+      - name: Upload Debian Source Package
+        if: ${{ inputs.source-only }}
+        uses: actions/upload-artifact@v4
+        with:
+          name: wlan-service-source-package
+          if-no-files-found: error
+          path: |
+            *.dsc
+            *.orig.tar.*
+            *.debian.tar.*
