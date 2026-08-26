@@ -1,18 +1,21 @@
-name: Build Package Reusable Workflow
+name: Build
+description: |
+  Builds the debian package represented by this repo at the ref pointed by the debain-ref argument.
 
 on:
-  workflow_call:
+  workflow_dispatch:
     inputs:
-      debian-ref:
-        description: The package repo ref to build
-        required: true
-        type: string
 
-    secrets:
-      DEBUSINE_USER:
-        required: false
-      DEBUSINE_TOKEN:
-        required: false
+      debian-ref:
+        description: The debian ref to build. For example branch "qcom/debian/latest" or tag "debian/1.0.0-1"
+        type: string
+        required: true
+        default: qcom/debian/latest
+
+      force-docker-build:
+        description: Force local pkg-builder instead of Debusine for Debian-family suites
+        type: boolean
+        default: false
 
 permissions:
   contents: read
@@ -20,99 +23,14 @@ permissions:
 
 jobs:
   build:
-    name: Build source package
-    runs-on: ubuntu-latest
-
-    steps:
-      - name: Checkout package repo
-        uses: actions/checkout@v4
-        with:
-          repository: ${{ github.repository }}
-          ref: ${{ inputs.debian-ref }}
-          path: package-repo
-
-      - name: Debug package repo
-        shell: bash
-        run: |
-          set -euo pipefail
-
-          echo "Repository: ${{ github.repository }}"
-          echo "Debian ref: ${{ inputs.debian-ref }}"
-
-          git -C package-repo log -1 --oneline
-
-          test -f package-repo/upstream.conf
-          ls -l package-repo/upstream.conf
-
-      - name: Download Prebuilt Binary Archive
-        shell: bash
-        run: |
-          set -euo pipefail
-
-          INPUTS_PKG_DIR="package-repo"
-          UPSTREAM_CONF="${INPUTS_PKG_DIR}/upstream.conf"
-
-          # shellcheck disable=SC1090
-          source "${UPSTREAM_CONF}"
-
-          : "${URL:?URL is not defined in upstream.conf}"
-          : "${FILE:?FILE is not defined in upstream.conf}"
-
-          echo "URL  : ${URL}"
-          echo "Tag  : ${TAG:-}"
-          echo "File : ${FILE}"
-
-          curl \
-            --fail \
-            --location \
-            --retry 3 \
-            --output "${FILE}" \
-            "${URL}"
-
-          tar -xzf "${FILE}" -C "${INPUTS_PKG_DIR}"
-
-      - name: Install source package tools
-        shell: bash
-        run: |
-          set -euo pipefail
-
-          sudo apt-get update
-          sudo apt-get install -y dpkg-dev
-
-      # =========================================================
-      # 修改点：只执行 dpkg-source -b
-      # 不调用 qcom-build-utils/build_package
-      # 不调用 sbuild
-      # =========================================================
-      - name: Build Debian Source Package
-        shell: bash
-        run: |
-          set -euo pipefail
-
-          cd package-repo
-
-          echo "[source-pkg] Working directory: $(pwd)"
-          echo "[source-pkg] Running dpkg-source -b ..."
-
-          dpkg-source -b .
-
-          echo "[source-pkg] Source package generated:"
-          find .. -maxdepth 1 -type f \
-            \( \
-              -name "*.dsc" \
-              -o -name "*.orig.tar.*" \
-              -o -name "*.debian.tar.*" \
-            \) \
-            -print
-
-          echo "[source-pkg] Successfully built source package"
-
-      - name: Upload source package
-        uses: actions/upload-artifact@v4
-        with:
-          name: wlan-service-source-package
-          path: |
-            *.dsc
-            *.orig.tar.*
-            *.debian.tar.*
-          if-no-files-found: error
+    name: Build
+    uses: qualcomm-linux/qcom-build-utils/.github/workflows/pkg-build-reusable-workflow.yml@main
+    with:
+      qcom-build-utils-ref: main
+      debian-ref: ${{ inputs.debian-ref }}
+      force-docker-build: ${{ inputs.force-docker-build }}
+      debusine-parent-workspace: ${{ vars.DEBUSINE_PARENT_WORKSPACE }}
+      source-only: true
+    secrets:
+      DEBUSINE_USER: ${{ secrets.DEBUSINE_USER }}
+      DEBUSINE_TOKEN: ${{ secrets.DEBUSINE_TOKEN }}
