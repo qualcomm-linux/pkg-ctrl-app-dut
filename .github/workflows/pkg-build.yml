@@ -30,6 +30,7 @@ jobs:
       debian-ref: ${{ inputs.debian-ref }}
       force-docker-build: ${{ inputs.force-docker-build }}
       debusine-parent-workspace: ${{ vars.DEBUSINE_PARENT_WORKSPACE }}
+      prebuilt: true
     secrets:
       DEBUSINE_USER: ${{ secrets.DEBUSINE_USER }}
       DEBUSINE_TOKEN: ${{ secrets.DEBUSINE_TOKEN }}
