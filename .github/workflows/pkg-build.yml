@@ -1,23 +1,13 @@
 name: Build
 
-description: |
-  Builds the Debian package represented by this repository
-  at the ref pointed by the debian-ref argument.
-
 on:
   workflow_dispatch:
     inputs:
       debian-ref:
-        description: The Debian ref to build. For example branch "qcom/debian/latest" or tag "debian/1.0.0-1"
-        type: string
+        description: Debian packaging branch to build
         required: true
-        default: qcom/debian/latest
-
-      force-docker-build:
-        description: Force local pkg-builder instead of Debusine for Debian-family suites
-        type: boolean
-        required: false
-        default: false
+        default: qcom/ubuntu/noble
+        type: string
 
 permissions:
   contents: read
@@ -25,13 +15,122 @@ permissions:
 
 jobs:
   build:
-    name: Build
-    uses: qualcomm-linux/qcom-build-utils/.github/workflows/pkg-build-reusable-workflow.yml@main
-    with:
-      qcom-build-utils-ref: main
-      debian-ref: ${{ inputs.debian-ref }}
-      force-docker-build: ${{ inputs.force-docker-build }}
-      debusine-parent-workspace: ${{ vars.DEBUSINE_PARENT_WORKSPACE }}
-    secrets:
-      DEBUSINE_USER: ${{ secrets.DEBUSINE_USER }}
-      DEBUSINE_TOKEN: ${{ secrets.DEBUSINE_TOKEN }}
+    name: Build source package only
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout package repo
+        uses: actions/checkout@v4
+        with:
+          repository: ${{ github.repository }}
+          ref: ${{ inputs.debian-ref }}
+          path: package-repo
+
+      - name: Debug package repo
+        shell: bash
+        run: |
+          set -euxo pipefail
+
+          echo "Repository: ${{ github.repository }}"
+          echo "Debian ref: ${{ inputs.debian-ref }}"
+
+          git -C package-repo log -1 --oneline
+
+          test -f package-repo/upstream.conf
+          test -f package-repo/debian/changelog
+          test -f package-repo/debian/source/format
+
+          echo "upstream.conf:"
+          cat package-repo/upstream.conf
+
+          echo "debian/changelog:"
+          head -5 package-repo/debian/changelog
+
+          echo "debian/source/format:"
+          cat package-repo/debian/source/format
+
+      - name: Download prebuilt archive
+        shell: bash
+        run: |
+          set -euxo pipefail
+
+          pkg_dir="${GITHUB_WORKSPACE}/package-repo"
+          upstream_conf="${pkg_dir}/upstream.conf"
+
+          # shellcheck disable=SC1090
+          source "${upstream_conf}"
+
+          : "${ARTIFACTORY:?ARTIFACTORY is not defined in upstream.conf}"
+          : "${TAG:?TAG is not defined in upstream.conf}"
+          : "${DISTRO:?DISTRO is not defined in upstream.conf}"
+          : "${PACKAGE_NAME:?PACKAGE_NAME is not defined in upstream.conf}"
+
+          download_url="${ARTIFACTORY}/${TAG}/${DISTRO}/${PACKAGE_NAME}"
+
+          echo "Download URL: ${download_url}"
+
+          curl \
+            --fail \
+            --show-error \
+            --location \
+            --retry 3 \
+            --output "${pkg_dir}/${PACKAGE_NAME}" \
+            "${download_url}"
+
+          tar -xzf "${pkg_dir}/${PACKAGE_NAME}" -C "${pkg_dir}"
+
+          rm -f "${pkg_dir}/${PACKAGE_NAME}"
+
+          echo "Prebuilt archive extracted"
+          find "${pkg_dir}/data" -maxdepth 6 -type f -print || true
+
+      - name: Install source package tools
+        shell: bash
+        run: |
+          set -euxo pipefail
+
+          sudo apt-get update
+          sudo apt-get install -y dpkg-dev
+
+      - name: Build Debian source package only
+        shell: bash
+        run: |
+          set -euxo pipefail
+
+          pkg_dir="${GITHUB_WORKSPACE}/package-repo"
+          work_dir="${GITHUB_WORKSPACE}"
+
+          cd "${pkg_dir}"
+
+          pkg="$(dpkg-parsechangelog -l debian/changelog -S Source)"
+          ver="$(dpkg-parsechangelog -l debian/changelog -S Version)"
+          upstream_ver="$(printf '%s\n' "${ver}" | sed 's/-[^-]*$//')"
+
+          echo "[source-pkg] Package: ${pkg}  Version: ${ver}  Upstream: ${upstream_ver}"
+
+          echo "[source-pkg] Creating orig tarball: ${work_dir}/${pkg}_${upstream_ver}.orig.tar.gz"
+          tar czf "${work_dir}/${pkg}_${upstream_ver}.orig.tar.gz" \
+            --exclude=./debian \
+            --exclude=./.git \
+            -C "${pkg_dir}" .
+
+          echo "[source-pkg] Running dpkg-source -b ..."
+          cd "${work_dir}"
+          dpkg-source -b "${pkg_dir}"
+
+          dsc_file="${work_dir}/${pkg}_${ver}.dsc"
+
+          test -f "${dsc_file}"
+
+          echo "[source-pkg] Source package ready: ${dsc_file}"
+          echo "✅ Successfully built source package"
+
+      - name: Upload source package artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: wlan-service-source-package
+          path: |
+            ${{ github.workspace }}/*.dsc
+            ${{ github.workspace }}/*.orig.tar.*
+            ${{ github.workspace }}/*.debian.tar.*
+          if-no-files-found: error
