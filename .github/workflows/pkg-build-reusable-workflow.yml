@@ -34,7 +34,7 @@ jobs:
       - name: Debug package repo
         shell: bash
         run: |
-          set -euo pipefail
+          set -euxo pipefail
 
           echo "Repository: ${{ github.repository }}"
           echo "Debian ref: ${{ inputs.debian-ref }}"
@@ -47,13 +47,13 @@ jobs:
       - name: Download Prebuilt Binary Archive
         shell: bash
         run: |
-          set -euo pipefail
+          set -euxo pipefail
 
-          INPUTS_PKG_DIR="package-repo"
-          UPSTREAM_CONF="${INPUTS_PKG_DIR}/upstream.conf"
+          pkg_dir="${GITHUB_WORKSPACE}/package-repo"
+          upstream_conf="${pkg_dir}/upstream.conf"
 
           # shellcheck disable=SC1090
-          source "${UPSTREAM_CONF}"
+          source "${upstream_conf}"
 
           : "${URL:?URL is not defined in upstream.conf}"
           : "${FILE:?FILE is not defined in upstream.conf}"
@@ -66,30 +66,27 @@ jobs:
             --fail \
             --location \
             --retry 3 \
-            --output "${FILE}" \
+            --output "${pkg_dir}/${FILE}" \
             "${URL}"
 
-          tar -xzf "${FILE}" -C "${INPUTS_PKG_DIR}"
+          tar -xzf "${pkg_dir}/${FILE}" -C "${pkg_dir}"
 
       - name: Install source package tools
         shell: bash
         run: |
-          set -euo pipefail
+          set -euxo pipefail
 
           sudo apt-get update
           sudo apt-get install -y dpkg-dev
 
-      # =========================================================
-      # 修改点：只执行 dpkg-source -b
-      # 不调用 qcom-build-utils/build_package
-      # 不调用 sbuild
-      # =========================================================
       - name: Build Debian Source Package
         shell: bash
         run: |
-          set -euo pipefail
+          set -euxo pipefail
 
-          cd package-repo
+          pkg_dir="${GITHUB_WORKSPACE}/package-repo"
+
+          cd "${pkg_dir}"
 
           echo "[source-pkg] Working directory: $(pwd)"
           echo "[source-pkg] Running dpkg-source -b ..."
@@ -97,13 +94,15 @@ jobs:
           dpkg-source -b .
 
           echo "[source-pkg] Source package generated:"
-          find .. -maxdepth 1 -type f \
+          find "${GITHUB_WORKSPACE}" -maxdepth 1 -type f \
             \( \
               -name "*.dsc" \
               -o -name "*.orig.tar.*" \
               -o -name "*.debian.tar.*" \
             \) \
             -print
+
+          test -n "$(find "${GITHUB_WORKSPACE}" -maxdepth 1 -type f -name '*.dsc' -print -quit)"
 
           echo "[source-pkg] Successfully built source package"
 
@@ -112,7 +111,7 @@ jobs:
         with:
           name: wlan-service-source-package
           path: |
-            *.dsc
-            *.orig.tar.*
-            *.debian.tar.*
+            ${{ github.workspace }}/*.dsc
+            ${{ github.workspace }}/*.orig.tar.*
+            ${{ github.workspace }}/*.debian.tar.*
           if-no-files-found: error
