@@ -11,6 +11,5 @@ Rules-Requires-Root: no
 
 Package: ftmdaemon-ip
 Architecture: arm64
-Description: Qualcomm WLAN FTM daemon over IP
- Proprietary Qualcomm WLAN FTM daemon package for IP based WLAN
- calibration and test functionality.
+Description: Qualcomm proprietary ftmdaemon-ip WLAN component
+ Proprietary prebuilt binary package for ftmdaemon-ip.
