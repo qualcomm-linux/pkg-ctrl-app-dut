@@ -4,7 +4,7 @@ on:
   workflow_dispatch:
     inputs:
       debian-ref:
-        description: Debian packaging branch to build
+        description: Debian packaging branch to use
         required: true
         default: qcom/ubuntu/noble
         type: string
@@ -15,7 +15,7 @@ permissions:
 
 jobs:
   build:
-    name: Build source package only
+    name: Build data artifact only
     runs-on: ubuntu-latest
 
     steps:
@@ -37,17 +37,18 @@ jobs:
           git -C package-repo log -1 --oneline
 
           test -f package-repo/upstream.conf
-          test -f package-repo/debian/changelog
-          test -f package-repo/debian/source/format
+          test -f package-repo/debian/control
+          test -f package-repo/debian/rules
+          test -f package-repo/debian/ftmdaemon-ip.install
 
-          echo "upstream.conf:"
+          echo "===== upstream.conf ====="
           cat package-repo/upstream.conf
 
-          echo "debian/changelog:"
-          head -5 package-repo/debian/changelog
+          echo "===== debian/control ====="
+          cat package-repo/debian/control
 
-          echo "debian/source/format:"
-          cat package-repo/debian/source/format
+          echo "===== debian/ftmdaemon-ip.install ====="
+          cat package-repo/debian/ftmdaemon-ip.install
 
       - name: Download prebuilt archive
         shell: bash
@@ -77,60 +78,52 @@ jobs:
             --output "${pkg_dir}/${PACKAGE_NAME}" \
             "${download_url}"
 
-          tar -xzf "${pkg_dir}/${PACKAGE_NAME}" -C "${pkg_dir}"
+          echo "Downloaded archive:"
+          ls -lh "${pkg_dir}/${PACKAGE_NAME}"
+
+          tar -xf "${pkg_dir}/${PACKAGE_NAME}" -C "${pkg_dir}"
 
           rm -f "${pkg_dir}/${PACKAGE_NAME}"
 
-          echo "Prebuilt archive extracted"
-          find "${pkg_dir}/data" -maxdepth 6 -type f -print || true
+          echo "Prebuilt archive extracted successfully"
 
-      - name: Install source package tools
-        shell: bash
-        run: |
-          set -euxo pipefail
-
-          sudo apt-get update
-          sudo apt-get install -y dpkg-dev
-
-      - name: Build Debian source package only
+      - name: Validate data folder
         shell: bash
         run: |
           set -euxo pipefail
 
           pkg_dir="${GITHUB_WORKSPACE}/package-repo"
-          work_dir="${GITHUB_WORKSPACE}"
 
-          cd "${pkg_dir}"
+          test -d "${pkg_dir}/data"
 
-          pkg="$(dpkg-parsechangelog -l debian/changelog -S Source)"
-          ver="$(dpkg-parsechangelog -l debian/changelog -S Version)"
-          upstream_ver="$(printf '%s\n' "${ver}" | sed 's/-[^-]*$//')"
+          echo "===== data folder content ====="
+          find "${pkg_dir}/data" -maxdepth 8 -print
 
-          echo "[source-pkg] Package: ${pkg}  Version: ${ver}  Upstream: ${upstream_ver}"
+          echo "===== validate ftmdaemon-ip binary ====="
+          test -f "${pkg_dir}/data/ftmdaemon-ip/arm64/usr/sbin/ftmdaemon-ip"
 
-          echo "[source-pkg] Creating orig tarball: ${work_dir}/${pkg}_${upstream_ver}.orig.tar.gz"
-          tar czf "${work_dir}/${pkg}_${upstream_ver}.orig.tar.gz" \
-            --exclude=./debian \
-            --exclude=./.git \
-            -C "${pkg_dir}" .
+          echo "data folder is ready"
 
-          echo "[source-pkg] Running dpkg-source -b ..."
-          cd "${work_dir}"
-          dpkg-source -b "${pkg_dir}"
+      - name: Prepare artifact
+        shell: bash
+        run: |
+          set -euxo pipefail
 
-          dsc_file="${work_dir}/${pkg}_${ver}.dsc"
+          artifact_root="${GITHUB_WORKSPACE}/artifact-root"
 
-          test -f "${dsc_file}"
+          rm -rf "${artifact_root}"
+          mkdir -p "${artifact_root}"
 
-          echo "[source-pkg] Source package ready: ${dsc_file}"
-          echo "✅ Successfully built source package"
+          cp -a \
+            "${GITHUB_WORKSPACE}/package-repo/data" \
+            "${artifact_root}/data"
 
-      - name: Upload source package artifacts
+          echo "===== artifact content ====="
+          find "${artifact_root}" -maxdepth 8 -print
+
+      - name: Upload data folder artifact
         uses: actions/upload-artifact@v4
         with:
-          name: wlan-service-source-package
-          path: |
-            ${{ github.workspace }}/*.dsc
-            ${{ github.workspace }}/*.orig.tar.*
-            ${{ github.workspace }}/*.debian.tar.*
+          name: wlan-service-data
+          path: ${{ github.workspace }}/artifact-root/**
           if-no-files-found: error
