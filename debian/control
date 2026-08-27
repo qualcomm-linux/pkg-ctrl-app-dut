@@ -1,5 +1,5 @@
 Source: wlan-service
-Section: net
+Section: utils
 Priority: optional
 Maintainer: Jing Feng <jinfen@qti.qualcomm.com>
 Build-Depends:
@@ -10,10 +10,7 @@ Standards-Version: 4.6.2
 Rules-Requires-Root: no
 
 Package: ftmdaemon-ip
-Architecture: any
-Depends:
- ${shlibs:Depends},
- ${misc:Depends}
+Architecture: arm64
 Description: Qualcomm WLAN FTM daemon over IP
  Proprietary Qualcomm WLAN FTM daemon package for IP based WLAN
  calibration and test functionality.
