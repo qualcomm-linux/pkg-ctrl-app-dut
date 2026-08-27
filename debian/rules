@@ -2,3 +2,13 @@
 
 %:
 	dh $@
+
+override_dh_auto_install:
+	set -e; \
+	test -d data/ftmdaemon-ip/arm64 || { \
+		echo "ERROR: data/ftmdaemon-ip/arm64 not found"; \
+		exit 1; \
+	}; \
+
+	mkdir -p debian/ftmdaemon-ip debian/ftmdaemon-ipt; \
+	cp -a data/ftmdaemon-ipt/arm64/. debian/ftmdaemon-ip/
