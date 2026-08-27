@@ -1,13 +1,21 @@
 name: Build
+description: |
+  Builds the debian package represented by this repo at the ref pointed by the debain-ref argument.
 
 on:
   workflow_dispatch:
     inputs:
+
       debian-ref:
-        description: Debian packaging branch to use
-        required: true
-        default: qcom/ubuntu/noble
+        description: The debian ref to build. For example branch "qcom/debian/latest" or tag "debian/1.0.0-1"
         type: string
+        required: true
+        default: qcom/debian/latest
+
+      force-docker-build:
+        description: Force local pkg-builder instead of Debusine for Debian-family suites
+        type: boolean
+        default: false
 
 permissions:
   contents: read
@@ -15,115 +23,13 @@ permissions:
 
 jobs:
   build:
-    name: Build data artifact only
-    runs-on: ubuntu-latest
-
-    steps:
-      - name: Checkout package repo
-        uses: actions/checkout@v4
-        with:
-          repository: ${{ github.repository }}
-          ref: ${{ inputs.debian-ref }}
-          path: package-repo
-
-      - name: Debug package repo
-        shell: bash
-        run: |
-          set -euxo pipefail
-
-          echo "Repository: ${{ github.repository }}"
-          echo "Debian ref: ${{ inputs.debian-ref }}"
-
-          git -C package-repo log -1 --oneline
-
-          test -f package-repo/upstream.conf
-          test -f package-repo/debian/control
-          test -f package-repo/debian/rules
-          test -f package-repo/debian/ftmdaemon-ip.install
-
-          echo "===== upstream.conf ====="
-          cat package-repo/upstream.conf
-
-          echo "===== debian/control ====="
-          cat package-repo/debian/control
-
-          echo "===== debian/ftmdaemon-ip.install ====="
-          cat package-repo/debian/ftmdaemon-ip.install
-
-      - name: Download prebuilt archive
-        shell: bash
-        run: |
-          set -euxo pipefail
-
-          pkg_dir="${GITHUB_WORKSPACE}/package-repo"
-          upstream_conf="${pkg_dir}/upstream.conf"
-
-          # shellcheck disable=SC1090
-          source "${upstream_conf}"
-
-          : "${ARTIFACTORY:?ARTIFACTORY is not defined in upstream.conf}"
-          : "${TAG:?TAG is not defined in upstream.conf}"
-          : "${DISTRO:?DISTRO is not defined in upstream.conf}"
-          : "${PACKAGE_NAME:?PACKAGE_NAME is not defined in upstream.conf}"
-
-          download_url="${ARTIFACTORY}/${TAG}/${DISTRO}/${PACKAGE_NAME}"
-
-          echo "Download URL: ${download_url}"
-
-          curl \
-            --fail \
-            --show-error \
-            --location \
-            --retry 3 \
-            --output "${pkg_dir}/${PACKAGE_NAME}" \
-            "${download_url}"
-
-          echo "Downloaded archive:"
-          ls -lh "${pkg_dir}/${PACKAGE_NAME}"
-
-          tar -xf "${pkg_dir}/${PACKAGE_NAME}" -C "${pkg_dir}"
-
-          rm -f "${pkg_dir}/${PACKAGE_NAME}"
-
-          echo "Prebuilt archive extracted successfully"
-
-      - name: Validate data folder
-        shell: bash
-        run: |
-          set -euxo pipefail
-
-          pkg_dir="${GITHUB_WORKSPACE}/package-repo"
-
-          test -d "${pkg_dir}/data"
-
-          echo "===== data folder content ====="
-          find "${pkg_dir}/data" -maxdepth 8 -print
-
-          echo "===== validate ftmdaemon-ip binary ====="
-          test -f "${pkg_dir}/data/ftmdaemon-ip/arm64/usr/sbin/ftmdaemon-ip"
-
-          echo "data folder is ready"
-
-      - name: Prepare artifact
-        shell: bash
-        run: |
-          set -euxo pipefail
-
-          artifact_root="${GITHUB_WORKSPACE}/artifact-root"
-
-          rm -rf "${artifact_root}"
-          mkdir -p "${artifact_root}"
-
-          cp -a \
-            "${GITHUB_WORKSPACE}/package-repo/data" \
-            "${artifact_root}/data"
-
-          echo "===== artifact content ====="
-          find "${artifact_root}" -maxdepth 8 -print
-
-      - name: Upload data folder artifact
-        uses: actions/upload-artifact@v4
-        with:
-          name: wlan-service-data
-          path: ${{ github.workspace }}/artifact-root/**
-          if-no-files-found: error
+    name: Build
+    uses: qualcomm-linux/qcom-build-utils/.github/workflows/pkg-build-reusable-workflow.yml@main
+    with:
+      qcom-build-utils-ref: main
+      debian-ref: ${{ inputs.debian-ref }}
+      force-docker-build: ${{ inputs.force-docker-build }}
+      debusine-parent-workspace: ${{ vars.DEBUSINE_PARENT_WORKSPACE }}
+    secrets:
+      DEBUSINE_USER: ${{ secrets.DEBUSINE_USER }}
+      DEBUSINE_TOKEN: ${{ secrets.DEBUSINE_TOKEN }}
