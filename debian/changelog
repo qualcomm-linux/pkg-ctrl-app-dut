@@ -1,4 +1,4 @@
-wlan-service (260630.1-1) noble; urgency=medium
+wlan-service (260630.1-1) UNRELEASED; urgency=medium
 
   * Release ftmdaemon-ip from prebuilt_noble.
 
