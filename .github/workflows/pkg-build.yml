@@ -26,7 +26,7 @@ permissions:
 jobs:
   build:
     name: Build
-    uses: qualcomm-linux/qcom-build-utils/.github/workflows/pkg-build-reusable-workflow.yml@main
+    uses: qualcomm-linux/pkg-wlan-service/blob/qli-ci/.github/workflows/pkg-build-reusable-workflow.yml@main
     with:
       qcom-build-utils-ref: main
       debian-ref: ${{ inputs.debian-ref }}
