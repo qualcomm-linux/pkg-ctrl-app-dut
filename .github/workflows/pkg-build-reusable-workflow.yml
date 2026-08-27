@@ -107,7 +107,7 @@ jobs:
           echo "[source-pkg] Successfully built source package"
 
       - name: Upload source package
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: wlan-service-source-package
           path: |
