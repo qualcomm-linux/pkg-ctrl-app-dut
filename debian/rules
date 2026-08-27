@@ -10,5 +10,5 @@ override_dh_auto_install:
 		exit 1; \
 	}; \
 
-	mkdir -p debian/ftmdaemon-ip debian/ftmdaemon-ip; \
-	cp -a data/ftmdaemon-ipt/arm64/. debian/ftmdaemon-ip/
+	mkdir -p debian/ftmdaemon-ip; \
+    cp -a data/ftmdaemon-ip/arm64/. debian/ftmdaemon-ip/
