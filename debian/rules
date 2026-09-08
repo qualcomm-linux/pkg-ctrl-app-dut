@@ -1,18 +1,35 @@
-#!/usr/bin/make -f
+#!/usr/bin/make -rRf
+
+export DH_VERBOSE=1
 
 %:
 	dh $@
 
+override_dh_auto_configure:
+	:
+
+override_dh_auto_build:
+	:
+
+override_dh_auto_clean:
+	:
+
 override_dh_auto_install:
-	set -e; \
-	test -d data/ctrl-app-dut/arm64 || { \
-		echo "ERROR: data/ctrl-app-dut/arm64 not found"; \
-		exit 1; \
-	}; \
-	test -d data/ath11k-fwtest/arm64 || { \
-		echo "ERROR: data/ath11k-fwtest/arm64 not found"; \
-		exit 1; \
-	}; \
-	mkdir -p debian/ctrl-app-dut debian/ath11k-fwtest; \
-	cp -a data/ctrl-app-dut/arm64/. debian/ctrl-app-dut/; \
-	cp -a data/ath11k-fwtest/arm64/. debian/ath11k-fwtest/
+	# -------- wlanftm --------
+	mkdir -p debian/ctrl-app-dut/usr/bin
+	cp -a data/ctrl-app-dut/arm64/usr/bin/* debian/ctrl-app-dut/usr/bin/
+
+override_dh_install:
+	:
+
+override_dh_strip:
+	:
+
+override_dh_dwz:
+	:
+
+override_dh_shlibdeps:
+	:
+
+override_dh_fixperms:
+	:
