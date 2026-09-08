@@ -1,7 +1,5 @@
-wlan-service (2.3.0-1) UNRELEASED; urgency=medium
+ctrl-app-dut (2.3.0-1) UNRELEASED; urgency=medium
 
-  * Update upstream source to wlan-service 260630.1.
-  * Add ath11k-fwtest binary package.
-  * Build ctrl-app-dut and ath11k-fwtest packages.
+  * Update upstream source to wlan-service.qclinux.0.0/260630.1/prebuilt_resolute/ctrl-app-dut_2.3.0_arm64.tar.gz
 
  -- Jing Feng <jinfen@qti.qualcomm.com>  Fri, 14 Aug 2026 00:00:00 +0000
