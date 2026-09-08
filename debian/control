@@ -1,9 +1,10 @@
-Source: wlan-service
+Source: ctrl-app-dut
 Section: utils
 Priority: optional
 Maintainer: Jing Feng <jinfen@qti.qualcomm.com>
 Build-Depends:
  debhelper-compat (= 13),
+ libglib2.0-dev,
  libnl-3-dev,
  libnl-genl-3-dev
 Standards-Version: 4.6.2
@@ -14,7 +15,3 @@ Architecture: arm64
 Description: Qualcomm proprietary ctrl-app-dut WLAN component
  Proprietary prebuilt binary package for ctrl-app-dut.
 
-Package: ath11k-fwtest
-Architecture: arm64
-Description: Qualcomm proprietary ath11k-fwtest WLAN component
- Proprietary prebuilt binary package for ath11k-fwtest.
