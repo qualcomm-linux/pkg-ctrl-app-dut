@@ -1,4 +1,4 @@
-ctrl-app-dut (2.3.0) UNRELEASED; urgency=medium
+ctrl-app-dut (2.3.0-1) UNRELEASED; urgency=medium
 
   * Update upstream source to wlan-service.qclinux.0.0/260630.1/prebuilt_resolute/ctrl-app-dut_2.3.0_arm64.tar.gz
 
