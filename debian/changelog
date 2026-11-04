@@ -1,8 +1,8 @@
-ctrl-app-dut (2.3.0-3) UNRELEASED; urgency=medium
+ctrl-app-dut (2.3.0-3) resolute; urgency=medium
 
  update changelog before next release
 
- -- Jing Feng <jinfen@qti.qualcomm.com>  Tue, 03 Nov 2026 08:35:04 +0000
+ -- GitHub Service Bot <githubservice@qti.qualcomm.com>  Wed, 04 Nov 2026 09:42:34 +0000
 
 ctrl-app-dut (2.3.0-2) resolute; urgency=medium
 
