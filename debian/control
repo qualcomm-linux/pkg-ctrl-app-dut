@@ -1,17 +1,19 @@
 Source: ctrl-app-dut
-Section: utils
-Priority: optional
+Section: non-free/utils
 Maintainer: Jing Feng <jinfen@qti.qualcomm.com>
 Build-Depends:
  debhelper-compat (= 13),
+Build-Depends-Arch:
  libglib2.0-dev,
  libnl-3-dev,
- libnl-genl-3-dev
-Standards-Version: 4.6.2
-Rules-Requires-Root: no
+ libnl-genl-3-dev,
+Standards-Version: 4.7.4
+Vcs-Browser: https://github.com/qualcomm-linux/pkg-ctrl-app-dut
+Vcs-Git: https://github.com/qualcomm-linux/pkg-ctrl-app-dut.git
 
 Package: ctrl-app-dut
 Architecture: arm64
+Depends: ${shlibs:Depends}, ${misc:Depends}
 Description: Qualcomm proprietary ctrl-app-dut WLAN component
  Proprietary prebuilt binary package for ctrl-app-dut.
 
