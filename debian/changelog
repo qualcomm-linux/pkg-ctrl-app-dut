@@ -1,8 +1,43 @@
 ctrl-app-dut (2.3.0-4~) UNRELEASED; urgency=medium
 
-  * WIP — update changelog before next release
+  [ Keerthi Gowda ]
+  * debian/rules: fix shebang and drop the no-op overrides for
+      dh_auto_configure/dh_auto_build/dh_auto_clean/dh_install/
+      dh_strip/dh_dwz/dh_shlibdeps/dh_fixperms, letting dh_shlibdeps run
+      with default debhelper behaviour
+  * debian/rules: drop the data/ prefix from override_dh_auto_install's
+      cp -a source; dpkg-source strips the orig tarball's sole top-level
+      data/ directory on extraction (standard "3.0 (quilt)" behaviour for
+      a single-directory tarball), so the installed binaries must be
+      copied from ctrl-app-dut/arm64/... directly, matching
+      pkg-btftm/pkg-qcom-sensors
+  * debian/control: add Depends: ${shlibs:Depends}, ${misc:Depends} to
+      the ctrl-app-dut package, which was missing entirely, so the
+      restored dh_shlibdeps run actually has somewhere to record the
+      runtime library dependencies
+  * debian/control: bump Standards-Version to 4.7.4, set Section to
+      non-free/utils, drop Priority/Rules-Requires-Root, switch to
+      Build-Depends-Arch for the arm64-specific dev dependencies, and
+      add Vcs-Browser/Vcs-Git
+  * debian/watch: replace upstream.conf with a debian/watch file,
+      matching pkg-btftm convention; the real prebuilt tarball
+      (ctrl-app-dut_2.3.0_arm64.tar.gz) already carries its version in
+      the filename, so no uversionmangle forcing is needed
+  * debian/source/options: add extend-diff-ignore for .github and
+      .gitignore
+  * debian/gbp.conf: add gbp-buildpackage configuration
+  * debian/source/lintian-overrides: add overrides for prebuilt-binary
+      source package
+  * debian/rules: also install the usr/sbin/ctrl_app_dut copy in
+      override_dh_auto_install; the upstream payload ships the same
+      binary under both usr/bin and usr/sbin, and the sbin copy was
+      being silently dropped
+  * Remove the tracked ctrl-app-dut/arm64/ directory; it was the
+      upstream payload committed directly to git for the old
+      upstream.conf/gbp-from-git build path, now dead weight since
+      debian/watch + uscan fetch the real tarball instead
 
- -- Jing Feng <jinfen@qti.qualcomm.com>  Thu, 05 Nov 2026 01:44:10 +0000
+ -- Keerthi Gowda <kbalehal@qti.qualcomm.com>  Fri, 13 Nov 2026 08:11:58 -0800
 
 ctrl-app-dut (2.3.0-3) resolute; urgency=medium
 
