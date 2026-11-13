@@ -32,6 +32,10 @@ ctrl-app-dut (2.3.0-4~) UNRELEASED; urgency=medium
       override_dh_auto_install; the upstream payload ships the same
       binary under both usr/bin and usr/sbin, and the sbin copy was
       being silently dropped
+  * Remove the tracked ctrl-app-dut/arm64/ directory; it was the
+      upstream payload committed directly to git for the old
+      upstream.conf/gbp-from-git build path, now dead weight since
+      debian/watch + uscan fetch the real tarball instead
 
  -- Keerthi Gowda <kbalehal@qti.qualcomm.com>  Fri, 13 Nov 2026 08:11:58 -0800
 
